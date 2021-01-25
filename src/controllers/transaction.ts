@@ -25,7 +25,8 @@ class TransactionController {
     };
 
     public addTransaction = async (req: Request, res: Response) => {
-        const { date, customerId, id } = req.body;
+        const { date, id } = req.body;
+        const customerId = req.body.customerId || 0; // If no customerId passed using 0 as default value
         // Add the new transaction
         const newTransaction = new this.Transaction({ date, customerId, id });
         const newTransactionData = await newTransaction.save();
@@ -35,7 +36,7 @@ class TransactionController {
         // Get all ruleset applicable for transaction date
         const allRulesets = await this.getAllRulesets(date);
         if(allRulesets.length < 1) return res.status(500).json({ msg: "No cashback available" }); 
-        // return res.status(200).json({ allCustTransactions, allRulesets });       
+        // return res.status(200).json({ allCustTransactions, allRulesets });         
 
         // Merge Rulesets and counts from customer_transactions
         let mergedRulesetData = allRulesets.map(item => ({
@@ -57,17 +58,29 @@ class TransactionController {
         }
     }
 
-    private getCustomerTransactions = async (customerId: Number) => {
-        const customerTransactionLists = await this.CustomerTransactions.aggregate(
-            [
-                { $match: { 'customerId' : customerId } },
-                { $group: {
-                    _id: '$rulsetApplied',
-                    count: { $sum: 1}, 
-                }}
-            ]
-        );
-        return customerTransactionLists;
+    private getCustomerTransactions = async (customerId: any) => {
+        if(customerId > 0) {
+            const customerTransactionLists = await this.CustomerTransactions.aggregate(
+                [
+                    { $match: { 'customerId' : customerId } },
+                    { $group: {
+                        _id: '$rulsetApplied',
+                        count: { $sum: 1}, 
+                    }}
+                ]
+            );
+            return customerTransactionLists;
+        } else {
+            const customerTransactionLists = await this.CustomerTransactions.aggregate(
+                [
+                    { $group: {
+                        _id: '$rulsetApplied',
+                        count: { $sum: 1}, 
+                    }}
+                ]
+            );
+            return customerTransactionLists;
+        }
     }
 
     private getAllRulesets = async (date: String) => {
