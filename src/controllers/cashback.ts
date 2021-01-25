@@ -9,7 +9,7 @@ class CashbackController {
       this.getAllCashbacks = this.getAllCashbacks.bind(this);
     }
 
-    getAllCashbacks(req: Request, res: Response) {
+    public getAllCashbacks = (req: Request, res: Response) => {
         Cashback.find({}).lean().exec(function(errCashback, cashbacks){
             return res.status(201).json({ cashbacks })
         })

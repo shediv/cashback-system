@@ -10,7 +10,7 @@ class RuleSetController {
       this.getAllRulesets = this.getAllRulesets.bind(this);
     }
 
-    addRulesets(req: Request, res: Response) {
+    public addRulesets = (req: Request, res: Response) => {
       const { startDate, endDate, cashback } = req.body;
       const newRuleset = new RuleSet({ startDate, endDate, cashback });
       newRuleset.save(function(errOnAdd, newRulesetData) {
@@ -19,7 +19,7 @@ class RuleSetController {
       });
     };
 
-    getAllRulesets(req: Request, res: Response) {
+    public getAllRulesets = (req: Request, res: Response) => {
       RuleSet.find({}).lean().exec(function(errRuleSet, rulesets){
         return res.status(201).json({ rulesets })
       })
