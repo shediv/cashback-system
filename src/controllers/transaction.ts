@@ -2,125 +2,125 @@ import { Router, Request, Response, NextFunction } from 'express';
 import async from 'async';
 
 // Model
-import Transaction from '../models/Transaction';
-import RuleSet from '../models/RuleSet';
-import CustomerTransactions from '../models/CustomerTransactions';
-import Cashback from '../models/Cashback';
+import TransactionModel from '../models/Transaction';
+import RuleSetModel from '../models/RuleSet';
+import CustomerTransactionsModel from '../models/CustomerTransactions';
+import CashbackModel from '../models/Cashback';
 
 class TransactionController {
+    private Cashback = CashbackModel;
+    private CustomerTransactions = CustomerTransactionsModel;
+    private Transaction = TransactionModel;
+    private RuleSet = RuleSetModel;
 
-    constructor() {  
+    constructor() { 
         this.addTransaction = this.addTransaction.bind(this);
         this.getAllTransactions = this.getAllTransactions.bind(this);
-        this.getApplicableRulesetsAndCT = this.getApplicableRulesetsAndCT.bind(this);
     }
 
-    getApplicableRulesetsAndCT = (res: Response, date: String, customerId: Number, transactionId: Number) => {
-        async.parallel({
-            allRulesets: function(callbackInner) {
-                RuleSet.find({ 
-                    startDate: { "$lte": date }, 
-                    endDate: { "$gte": date }
-                }).lean().sort({ cashback: -1 }).exec(function(errRuleSet, rulesets){
-                    callbackInner(errRuleSet, rulesets);
-                });
-            },
-            allCustTransactions: function(callbackInner) {
-                CustomerTransactions.aggregate(
-                    [
-                        { $match: { 'customerId' : customerId } },
-                        { $group: {
-                            _id: '$rulsetApplied',
-                            count: { $sum: 1}, 
-                        }}
-                    ]
-                ).exec(function ( errorCT, custTransactionsData) {
-                    callbackInner(errorCT, custTransactionsData);           
-                });
-            }
-        },
-        function(err, results) {
-            let { allRulesets, allCustTransactions } = results;
-
-            // Merge Rulesets and counts from customer_transactions
-            let mergedRulesetData = allRulesets.map(item => ({
-                ...item,
-                ...allCustTransactions.find(({ _id }) => _id == item._id),
-            }));
-
-            // Select the applicable ruleset based on ruleset conditions
-            let applicableRuleset:Object = {};
-            let cashBackData:any = {};
-            let customerTransactionsData:any = {};
-            mergedRulesetData.forEach((currentRuleset) => {
-                if(currentRuleset.redemptionLimit) {
-                    if((currentRuleset.count < currentRuleset.redemptionLimit)) {
-                        applicableRuleset = currentRuleset;
-                        // Data to be added to cashback
-                        cashBackData.transactionId = transactionId;
-                        cashBackData.amount = currentRuleset.cashback;
-
-                        // Data to be added to customer_transactions
-                        customerTransactionsData.transactionId = transactionId;
-                        customerTransactionsData.rulsetApplied = currentRuleset._id;
-                        customerTransactionsData.cashbackReceived = currentRuleset.cashback;
-                        customerTransactionsData.customerId = customerId;
-                        customerTransactionsData.date = date;
-                    } else {
-                        // Move on to next ruleset
-                    }
-                } else {
-                    applicableRuleset = currentRuleset;
-                    // Data to be added to cashback
-                    cashBackData.transactionId = transactionId;
-                    cashBackData.amount = currentRuleset.cashback;
-
-                    // Data to be added to customer_transactions
-                    customerTransactionsData.transactionId = transactionId;
-                    customerTransactionsData.rulsetApplied = currentRuleset._id;
-                    customerTransactionsData.cashbackReceived = currentRuleset.cashback;
-                    customerTransactionsData.customerId = customerId;
-                    customerTransactionsData.date = date;
-                }
-            });
-
-            // Add customer_transaction entry 
-            const newCustomerTransaction = new CustomerTransactions(customerTransactionsData);
-            newCustomerTransaction.save(function(errOnCustomerTransaction, newCustomerTransactionData) {
-                if (errOnCustomerTransaction) console.log("errOnCustomerTransaction = ", errOnCustomerTransaction);
-                // return res.status(200).json({newCustomerTransactionData});
-
-                // Add cashback entry
-                const newCashback = new Cashback(cashBackData)
-                newCashback.save(function(errOnCashback, newCashbackData) {
-                    if (errOnCashback) console.log("errOnCashback = ", errOnCashback);
-                    return res.status(200).json({ mergedRulesetData, applicableRuleset, cashBackData, customerTransactionsData, newCustomerTransactionData, newCashbackData });
-                })
-
-            });
-
-            // return results;
-            // return res.status(200).json({ mergedRulesetData, applicableRuleset, cashBackData, customerTransactionsData });
-        });
-    }
-
-    addTransaction(req: Request, res: Response) {
-        const { date, customerId, id } = req.body;
-
-        // Add the new transaction
-        const newTransaction = new Transaction({ date, customerId, id });
-        newTransaction.save(function(errOnAdd, newRulesetData) {
-            if (errOnAdd) return res.status(500).json({errOnAdd});
-            // res.status(200).json({newRulesetData});
-            this.getApplicableRulesetsAndCT(res, date, customerId, id);
-        });            
-    };
-
-    getAllTransactions(req: Request, res: Response) {
-        Transaction.find({}).lean().exec(function(errRuleSet, rulesets){
+    public getAllTransactions = (req: Request, res: Response) => {
+        this.Transaction.find({}).lean().exec(function(errRuleSet, rulesets){
             return res.status(201).json({ rulesets })
         })
     };
+
+    public addTransaction = async (req: Request, res: Response) => {
+        const { date, customerId, id } = req.body;
+        // Add the new transaction
+        const newTransaction = new this.Transaction({ date, customerId, id });
+        const newTransactionData = await newTransaction.save();
+
+        // Get Previous transactions count
+        const allCustTransactions = await this.getCustomerTransactions(customerId);
+        // Get all ruleset applicable for transaction date
+        const allRulesets = await this.getAllRulesets(date);
+        if(allRulesets.length < 1) return res.status(500).json({ msg: "No cashback available" });
+
+        // Merge Rulesets and counts from customer_transactions
+        let mergedRulesetData = allRulesets.map(item => ({
+            ...item,
+            ...allCustTransactions.find(({ _id }) => _id == item._id),
+        }));
+
+        // Select the applicable ruleset based on ruleset conditions
+        let applicableRuleset = await this.getApplicableRuleset(mergedRulesetData);
+
+        // If any ruleset is applicable then add cashback & also add customer_transaction data
+        if(Object.entries(applicableRuleset).length) {
+            let newCustomerTransactionData = await this.addNewCustomerTransaction(id, applicableRuleset, customerId, date);
+            let addNewCashbackData = await this.addNewCashback(id, applicableRuleset);
+            return res.status(200).json({ newCustomerTransactionData, addNewCashbackData });
+        } else {
+            return res.status(500).json({ msg: "No cashback available" });
+        }
+    }
+
+    private getCustomerTransactions = async (customerId: Number) => {
+        const customerTransactionLists = await this.CustomerTransactions.aggregate(
+            [
+                { $match: { 'customerId' : customerId } },
+                { $group: {
+                    _id: '$rulsetApplied',
+                    count: { $sum: 1}, 
+                }}
+            ]
+        );
+        return customerTransactionLists;
+    }
+
+    private getAllRulesets = async (date: String) => {
+        const allRulesets = await this.RuleSet.find({ 
+            startDate: { "$lte": date }, 
+            endDate: { "$gte": date }
+        }).lean().sort({ cashback: -1 }).exec()
+        return allRulesets;
+    }
+    
+    private getApplicableRuleset = async (mergedRulesetData: any) => {
+        let i = 0;
+        let applicableRulestFound =  false;
+        let applicableRulest = {};
+        do {
+            var currentRuleset = mergedRulesetData[i];
+            if (currentRuleset.redemptionLimit) {
+                if(currentRuleset.count && currentRuleset.count < currentRuleset.redemptionLimit) {
+                    applicableRulest = currentRuleset;
+                    applicableRulestFound =  true;    
+                }
+            } else {
+                applicableRulest = currentRuleset;
+                applicableRulestFound =  true;
+            }
+            i++
+        } while(i < mergedRulesetData.length && !applicableRulestFound)
+        return applicableRulest;
+    }
+
+    private addNewCustomerTransaction = async (transactionId: Number, rulset: any, customerId: Number, date: String) => {
+        const custTransData = {
+            transactionId,
+            customerId,
+            date,
+            rulsetApplied: rulset._id,
+            cashbackReceived: rulset.cashback
+        };
+        // Add the new CustomerTransactions
+        const newCustomerTransactions = new this.CustomerTransactions(custTransData);
+        const newCustomerTransactionsData = await newCustomerTransactions.save();
+        return newCustomerTransactionsData;
+    }
+
+    private addNewCashback = async (transactionId: Number, rulset: any) => {
+        const cashbackData = {
+            transactionId,
+            rulsetApplied: rulset._id,
+            cashbackReceived: rulset.cashback
+        };
+        // Add cashback entry
+        const newCashback = new this.Cashback(cashbackData);
+        const newCashbackData = await newCashback.save();
+        return newCashbackData;
+    }
     
 }
 

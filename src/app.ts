@@ -43,8 +43,6 @@ class Applicaction {
         this.app.use('/ruleset', rulesetRoutes);
         this.app.use('/transaction', transactionRoutes);
         this.app.use('/cashback', cashbackRoutes);
-
-        // this.app.use(express.static(path.join(__dirname, 'public')));
     }
 
     start(): void {
