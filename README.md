@@ -1,5 +1,4 @@
-# Typescript Nodejs Mongodb CRUD
-![](docs/screenshot.png)
+# CashBack System
 
 # Installation
 ```bash
