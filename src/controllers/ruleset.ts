@@ -11,8 +11,15 @@ class RuleSetController {
     }
 
     public addRulesets = (req: Request, res: Response) => {
-      const { startDate, endDate, cashback } = req.body;
-      const newRuleset = new RuleSet({ startDate, endDate, cashback });
+      let newRulesetData = {
+        startDate: req.body.startDate,
+        endDate: req.body.endDate,
+        cashback: req.body.cashback,
+      };
+      if (req.body.redemptionLimit) {
+        newRulesetData['redemptionLimit'] =  req.body.redemptionLimit
+      }
+      const newRuleset = new RuleSet(newRulesetData);
       newRuleset.save(function(errOnAdd, newRulesetData) {
         if (errOnAdd) return res.status(500).json({errOnAdd});
         return res.status(200).json({newRulesetData});

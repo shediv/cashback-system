@@ -34,7 +34,8 @@ class TransactionController {
         const allCustTransactions = await this.getCustomerTransactions(customerId);
         // Get all ruleset applicable for transaction date
         const allRulesets = await this.getAllRulesets(date);
-        if(allRulesets.length < 1) return res.status(500).json({ msg: "No cashback available" });
+        if(allRulesets.length < 1) return res.status(500).json({ msg: "No cashback available" }); 
+        // return res.status(200).json({ allCustTransactions, allRulesets });       
 
         // Merge Rulesets and counts from customer_transactions
         let mergedRulesetData = allRulesets.map(item => ({
@@ -44,6 +45,7 @@ class TransactionController {
 
         // Select the applicable ruleset based on ruleset conditions
         let applicableRuleset = await this.getApplicableRuleset(mergedRulesetData);
+        // return res.status(200).json({ mergedRulesetData, applicableRuleset });
 
         // If any ruleset is applicable then add cashback & also add customer_transaction data
         if(Object.entries(applicableRuleset).length) {
@@ -83,9 +85,14 @@ class TransactionController {
         do {
             var currentRuleset = mergedRulesetData[i];
             if (currentRuleset.redemptionLimit) {
-                if(currentRuleset.count && currentRuleset.count < currentRuleset.redemptionLimit) {
+                if(currentRuleset.hasOwnProperty('count')) {
+                    if(currentRuleset.count < currentRuleset.redemptionLimit) {
+                        applicableRulest = currentRuleset;
+                        applicableRulestFound =  true;
+                    }                        
+                } else {
                     applicableRulest = currentRuleset;
-                    applicableRulestFound =  true;    
+                    applicableRulestFound =  true;
                 }
             } else {
                 applicableRulest = currentRuleset;
@@ -114,7 +121,7 @@ class TransactionController {
         const cashbackData = {
             transactionId,
             rulsetApplied: rulset._id,
-            cashbackReceived: rulset.cashback
+            amount: rulset.cashback
         };
         // Add cashback entry
         const newCashback = new this.Cashback(cashbackData);
