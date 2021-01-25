@@ -3,7 +3,7 @@
 # Installation
 ```bash
 npm install
-npm build
+npm build  or npm run build
 npm start
 ```
 
