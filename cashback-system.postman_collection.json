@@ -1,0 +1,84 @@
+{
+	"variables": [],
+	"info": {
+		"name": "cashback-system",
+		"_postman_id": "e2c93b36-d776-a2a9-52e0-5d7790d74c7d",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get ruleset",
+			"request": {
+				"url": "http://localhost:4000/ruleset",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Add ruleset",
+			"request": {
+				"url": "http://localhost:4000/ruleset",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{    \n\t\"startDate\": \"2021-01-23\",    \n\t\"endDate\": \"2021-01-28\",    \n\t\"cashback\": 8,\n\t\"redemptionLimit\": 10\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Add transaction",
+			"request": {
+				"url": "http://localhost:4000/transaction",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \n\t\"date\": \"2021-01-25\",  \n\t\"customerId\": 1,\n\t\"id\": 4\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Get cashback",
+			"request": {
+				"url": "http://localhost:4000/cashback",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Get All transaction",
+			"request": {
+				"url": "http://localhost:4000/transaction",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
