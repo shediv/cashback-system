@@ -11,7 +11,7 @@ class CashbackController {
 
     public getAllCashbacks = (req: Request, res: Response) => {
         Cashback.find({}).lean().exec(function(errCashback, cashbacks){
-            return res.status(201).json({ cashbacks })
+            return res.status(201).json(cashbacks)
         })
     };
 }

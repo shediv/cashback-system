@@ -16,11 +16,19 @@ class TransactionController {
     constructor() { 
         this.addTransaction = this.addTransaction.bind(this);
         this.getAllTransactions = this.getAllTransactions.bind(this);
+        this.deleteTransaction = this.deleteTransaction.bind(this);
     }
 
     public getAllTransactions = (req: Request, res: Response) => {
-        this.Transaction.find({}).lean().exec(function(errRuleSet, rulesets){
-            return res.status(201).json({ rulesets })
+        this.Transaction.find({}).lean().exec(function(errTransactions, transactions){
+            return res.status(201).json(transactions)
+        })
+    };
+
+    public deleteTransaction = (req: Request, res: Response) => {
+        const { id } = req.params;
+        this.Transaction.findByIdAndDelete(id).lean().exec(function(errDelTransaction, delTransaction){
+          return res.status(201).json(delTransaction)
         })
     };
 
@@ -52,7 +60,7 @@ class TransactionController {
         if(Object.entries(applicableRuleset).length) {
             let newCustomerTransactionData = await this.addNewCustomerTransaction(id, applicableRuleset, customerId, date);
             let addNewCashbackData = await this.addNewCashback(id, applicableRuleset);
-            return res.status(200).json({ newCustomerTransactionData, addNewCashbackData });
+            return res.status(200).json(newTransactionData);
         } else {
             return res.status(500).json({ msg: "No cashback available" });
         }

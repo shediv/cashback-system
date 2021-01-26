@@ -2,6 +2,7 @@ import express from 'express';
 import morgan from 'morgan';
 import exphbs from 'express-handlebars';
 import path from 'path';
+import cors from "cors";
 
 // Routes
 import indexRoutes from './routes';
@@ -15,6 +16,7 @@ class Applicaction {
 
     constructor() {
         this.app = express();
+        this.app.use(cors({ origin: true }));
         this.settings();
         this.middlewares();
         this.routes();
@@ -43,6 +45,8 @@ class Applicaction {
         this.app.use('/ruleset', rulesetRoutes);
         this.app.use('/transaction', transactionRoutes);
         this.app.use('/cashback', cashbackRoutes);
+
+        // this.app.use(express.static(path.join(__dirname, 'public')));
     }
 
     start(): void {

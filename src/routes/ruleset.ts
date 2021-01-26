@@ -8,4 +8,7 @@ router.route('/')
     .get((req: Request, res: Response) => RuleSetController.getAllRulesets(req, res))
     .post((req: Request, res: Response) => RuleSetController.addRulesets(req, res))
 
+router.route('/delete/:id')
+    .put((req: Request, res: Response) => RuleSetController.deleteRuleset(req, res))  
+
 export default router;
