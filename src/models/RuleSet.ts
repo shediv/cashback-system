@@ -18,6 +18,14 @@ const RuleSetSchema = new Schema({
     redemptionLimit: {
         type: Number,
         required: false
+    },
+    minTransactions: {
+        type: Number,
+        required: false
+    },
+    budget: {
+        type: Number,
+        required: false
     }
 });
 

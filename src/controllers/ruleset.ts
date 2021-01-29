@@ -20,6 +20,15 @@ class RuleSetController {
       if (req.body.redemptionLimit) {
         newRulesetData['redemptionLimit'] =  req.body.redemptionLimit
       }
+
+      if (req.body.minTransactions) {
+        newRulesetData['minTransactions'] =  req.body.minTransactions
+      }
+
+      if (req.body.budget) {
+        newRulesetData['budget'] =  req.body.budget
+      }
+
       const newRuleset = new RuleSet(newRulesetData);
       newRuleset.save(function(errOnAdd, newRulesetData) {
         if (errOnAdd) return res.status(500).json({errOnAdd});

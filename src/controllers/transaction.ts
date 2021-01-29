@@ -107,23 +107,70 @@ class TransactionController {
         let applicableRulest = {};
         do {
             var currentRuleset = mergedRulesetData[i];
-            if (currentRuleset.redemptionLimit) {
-                if(currentRuleset.hasOwnProperty('count')) {
-                    if(currentRuleset.count < currentRuleset.redemptionLimit) {
-                        applicableRulest = currentRuleset;
-                        applicableRulestFound =  true;
-                    }                        
-                } else {
-                    applicableRulest = currentRuleset;
-                    applicableRulestFound =  true;
-                }
-            } else {
+            let redemptionLimitCheckTrue = await this.redemptionLimitCheck(currentRuleset);
+            let minTransactionsCheckTrue = await this.minTransactionsCheck(currentRuleset);
+            let budgetCheckTrue = await this.budgetCheck(currentRuleset);
+            if(redemptionLimitCheckTrue && minTransactionsCheckTrue && minTransactionsCheckTrue) {
                 applicableRulest = currentRuleset;
-                applicableRulestFound =  true;
+                applicableRulestFound = true;
             }
             i++
         } while(i < mergedRulesetData.length && !applicableRulestFound)
         return applicableRulest;
+    }
+
+    private redemptionLimitCheck = async (rulesetData:any) => {
+        let redemptionLimitCheckPassed:Boolean = false;
+        var currentIterationRuleset = rulesetData;
+        if (currentIterationRuleset.redemptionLimit) {
+            if(currentIterationRuleset.hasOwnProperty('count')) {
+                if(currentIterationRuleset.count < currentIterationRuleset.redemptionLimit) {
+                    redemptionLimitCheckPassed =  true;
+                }                        
+            } else {
+                redemptionLimitCheckPassed =  true;
+            }
+        } else {
+            redemptionLimitCheckPassed =  true;
+        }
+        
+        return redemptionLimitCheckPassed;
+    }
+
+    private minTransactionsCheck = async (rulesetData:any) => {
+        let minTransactionsCheckPassed:Boolean = false;
+        var currentIterationRuleset = rulesetData;
+        if (currentIterationRuleset.minTransactions) {
+            if(currentIterationRuleset.hasOwnProperty('count')) {
+                if(currentIterationRuleset.count > currentIterationRuleset.minTransactions) {
+                    minTransactionsCheckPassed =  true;
+                }                        
+            } else {
+                minTransactionsCheckPassed =  true;
+            }
+        } else {
+            minTransactionsCheckPassed =  true;
+        }
+        
+        return minTransactionsCheckPassed;
+    }
+
+    private budgetCheck = async (rulesetData:any) => {
+        let budgetCheckPassed:Boolean = false;
+        var currentIterationRuleset = rulesetData;
+        if (currentIterationRuleset.budget) {
+            if(currentIterationRuleset.hasOwnProperty('cashbackTotal')) {
+                if(currentIterationRuleset.cashbackTotal < currentIterationRuleset.budget) {
+                    budgetCheckPassed =  true;
+                }                        
+            } else {
+                budgetCheckPassed =  true;
+            }
+        } else {
+            budgetCheckPassed =  true;
+        }
+        
+        return budgetCheckPassed;
     }
 
     private addNewCustomerTransaction = async (transactionId: Number, rulset: any, customerId: Number, date: String) => {
