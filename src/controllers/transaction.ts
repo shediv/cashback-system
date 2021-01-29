@@ -73,7 +73,8 @@ class TransactionController {
                     { $match: { 'customerId' : customerId } },
                     { $group: {
                         _id: '$rulsetApplied',
-                        count: { $sum: 1}, 
+                        count: { $sum: 1},
+                        budgetSpent : { $sum: "$cashbackReceived" }
                     }}
                 ]
             );
@@ -83,7 +84,8 @@ class TransactionController {
                 [
                     { $group: {
                         _id: '$rulsetApplied',
-                        count: { $sum: 1}, 
+                        count: { $sum: 1},
+                        budgetSpent : { $sum: "$cashbackReceived" } 
                     }}
                 ]
             );

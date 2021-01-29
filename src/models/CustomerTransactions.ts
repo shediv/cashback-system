@@ -14,8 +14,8 @@ const CustomerTransactionsSchema = new Schema({
         required: true
     },
     cashbackReceived: {
-        type: String,
-        required: false
+        type: Number,
+        required: true
     },
     date: {
         type: String,
