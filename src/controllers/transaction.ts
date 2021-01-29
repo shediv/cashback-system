@@ -43,6 +43,7 @@ class TransactionController {
         const allCustTransactions = await this.getCustomerTransactions(customerId);
         // Get all ruleset applicable for transaction date
         const allRulesets = await this.getAllRulesets(date);
+        const allTransactionsByCustomer = await this.getAllTransactionsByCustomer(customerId);
         if(allRulesets.length < 1) return res.status(500).json({ msg: "No cashback available" }); 
         // return res.status(200).json({ allCustTransactions, allRulesets });         
 
@@ -53,7 +54,7 @@ class TransactionController {
         }));
 
         // Select the applicable ruleset based on ruleset conditions
-        let applicableRuleset = await this.getApplicableRuleset(mergedRulesetData);
+        let applicableRuleset = await this.getApplicableRuleset(mergedRulesetData, allTransactionsByCustomer);
         // return res.status(200).json({ mergedRulesetData, applicableRuleset });
 
         // If any ruleset is applicable then add cashback & also add customer_transaction data
@@ -93,6 +94,11 @@ class TransactionController {
         }
     }
 
+    private getAllTransactionsByCustomer = async (customerId: any) => {
+        const transactionsByCus = await this.Transaction.find({ 'customerId' : customerId }).count();
+        return transactionsByCus;
+    }
+
     private getAllRulesets = async (date: String) => {
         const allRulesets = await this.RuleSet.find({ 
             startDate: { "$lte": date }, 
@@ -101,16 +107,17 @@ class TransactionController {
         return allRulesets;
     }
     
-    private getApplicableRuleset = async (mergedRulesetData: any) => {
+    private getApplicableRuleset = async (mergedRulesetData: any, transByCusCount: Number) => {
         let i = 0;
         let applicableRulestFound =  false;
         let applicableRulest = {};
         do {
             var currentRuleset = mergedRulesetData[i];
             let redemptionLimitCheckTrue = await this.redemptionLimitCheck(currentRuleset);
-            let minTransactionsCheckTrue = await this.minTransactionsCheck(currentRuleset);
+            let minTransactionsCheckTrue = await this.minTransactionsCheck(currentRuleset, transByCusCount);
             let budgetCheckTrue = await this.budgetCheck(currentRuleset);
-            if(redemptionLimitCheckTrue && minTransactionsCheckTrue && minTransactionsCheckTrue) {
+
+            if(redemptionLimitCheckTrue && minTransactionsCheckTrue && budgetCheckTrue) {
                 applicableRulest = currentRuleset;
                 applicableRulestFound = true;
             }
@@ -137,17 +144,13 @@ class TransactionController {
         return redemptionLimitCheckPassed;
     }
 
-    private minTransactionsCheck = async (rulesetData:any) => {
+    private minTransactionsCheck = async (rulesetData:any, transByCusCount:Number) => {
         let minTransactionsCheckPassed:Boolean = false;
         var currentIterationRuleset = rulesetData;
         if (currentIterationRuleset.minTransactions) {
-            if(currentIterationRuleset.hasOwnProperty('count')) {
-                if(currentIterationRuleset.count > currentIterationRuleset.minTransactions) {
-                    minTransactionsCheckPassed =  true;
-                }                        
-            } else {
+            if(transByCusCount > currentIterationRuleset.minTransactions) {
                 minTransactionsCheckPassed =  true;
-            }
+            }                        
         } else {
             minTransactionsCheckPassed =  true;
         }
@@ -159,10 +162,10 @@ class TransactionController {
         let budgetCheckPassed:Boolean = false;
         var currentIterationRuleset = rulesetData;
         if (currentIterationRuleset.budget) {
-            if(currentIterationRuleset.hasOwnProperty('cashbackTotal')) {
-                if(currentIterationRuleset.cashbackTotal < currentIterationRuleset.budget) {
+            if(currentIterationRuleset.hasOwnProperty('budgetSpent')) {
+                if(currentIterationRuleset.budgetSpent < currentIterationRuleset.budget) {
                     budgetCheckPassed =  true;
-                }                        
+                }                       
             } else {
                 budgetCheckPassed =  true;
             }
